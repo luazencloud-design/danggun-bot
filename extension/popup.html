@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>당근 자동응답 봇</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard, sans-serif;
+    width: 360px;
+    padding: 0;
+    margin: 0;
+    background: #fafafa;
+  }
+  header {
+    background: linear-gradient(135deg, #FF6F0F 0%, #FF8C3D 100%);
+    color: white;
+    padding: 12px 14px;
+  }
+  header h1 {
+    font-size: 14px;
+    margin: 0;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  header .sub {
+    font-size: 10px;
+    opacity: 0.9;
+    margin-top: 2px;
+  }
+
+  .section {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+    background: white;
+  }
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #999;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* 상태 그리드 */
+  .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat { padding: 6px 8px; border-radius: 6px; font-size: 11px; }
+  .stat-ok { background: #e6f7ec; color: #16a34a; border: 1px solid #bbf7d0; }
+  .stat-warn { background: #fef3c7; color: #ca8a04; border: 1px solid #fde68a; }
+  .stat-err { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+  .stat .label { font-weight: 700; font-size: 9px; opacity: 0.8; }
+  .stat .val { font-weight: 600; margin-top: 1px; }
+
+  /* 방 목록 */
+  .room {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 12px;
+    border-bottom: 1px solid #f4f4f4;
+    cursor: pointer;
+  }
+  .room:last-child { border-bottom: 0; }
+  .room:hover { background: #fafafa; }
+  .room .avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #60a5fa, #6366f1);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .room .nick { font-weight: 600; color: #333; }
+  .room .last { color: #888; font-size: 10px; margin-top: 1px; }
+  .room .title-col { flex: 1; min-width: 0; overflow: hidden; }
+  .room .title-col > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { font-size: 9px; padding: 1px 5px; border-radius: 8px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .badge-official { background: #e0f7f0; color: #00B493; }
+  .badge-selected { background: #fff0e6; color: #FF6F0F; }
+
+  /* 결정 로그 */
+  .log-entry {
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    line-height: 1.35;
+    border-left: 3px solid;
+  }
+  .log-reply { background: #e6f7ec; border-color: #16a34a; color: #166534; }
+  .log-handoff { background: #fee2e2; border-color: #dc2626; color: #991b1b; }
+  .log-skip { background: #f5f5f4; border-color: #a8a29e; color: #57534e; }
+  .log-error { background: #fef3c7; border-color: #ca8a04; color: #854d0e; }
+  .log-time { font-size: 9px; opacity: 0.6; }
+  .log-title { font-weight: 700; }
+  .log-reason { margin-top: 2px; }
+
+  .empty { color: #999; text-align: center; padding: 16px; font-size: 11px; line-height: 1.5; }
+  .empty-icon { font-size: 24px; margin-bottom: 4px; }
+
+  .alert { padding: 10px 12px; border-radius: 8px; margin: 10px 12px 0; font-size: 11px; line-height: 1.5; }
+  .alert-err { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
+  .alert-warn { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; }
+  .alert-title { font-weight: 700; margin-bottom: 4px; }
+  .alert-body { font-size: 10px; }
+  .alert code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-family: monospace; font-size: 10px; }
+
+  button.link-btn {
+    background: transparent;
+    border: 0;
+    color: #2563eb;
+    font-size: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  button.open-btn {
+    width: 100%; background: #FF6F0F; color: white; border: 0; padding: 8px;
+    border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; margin-top: 6px;
+  }
+  button.open-btn:hover { background: #ee6200; }
+  button.refresh-btn {
+    background: #eee; border: 0; border-radius: 4px; padding: 2px 6px;
+    font-size: 9px; cursor: pointer; color: #666;
+  }
+  button.refresh-btn:hover { background: #ddd; color: #000; }
+  footer { padding: 8px 14px; font-size: 10px; color: #999; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🥕 당근 자동응답 봇</h1>
+    <div class="sub">v0.4 · 실시간 진단</div>
+  </header>
+
+  <div id="webappAlert" style="display:none"></div>
+
+  <!-- 시스템 상태 -->
+  <div class="section">
+    <div class="section-title">
+      <span>🩺 시스템 상태</span>
+      <button class="refresh-btn" id="refreshBtn">새로고침</button>
+    </div>
+    <div class="status-grid">
+      <div class="stat" id="statApi"><div class="label">Gemini API 키</div><div class="val">…</div></div>
+      <div class="stat" id="statProducts"><div class="label">상품 등록</div><div class="val">…</div></div>
+      <div class="stat" id="statRooms"><div class="label">동기화된 방</div><div class="val">…</div></div>
+      <div class="stat" id="statHandoffs"><div class="label">핸드오프 중</div><div class="val">…</div></div>
+    </div>
+  </div>
+
+  <!-- 방 목록 -->
+  <div class="section">
+    <div class="section-title"><span>💬 채팅방 <span id="count" style="color:#666;font-size:9px"></span></span></div>
+    <div id="rooms">
+      <div class="empty"><div class="empty-icon">💤</div>chat.daangn.com 탭이 없어요.</div>
+    </div>
+    <button class="open-btn" id="openDaangn">🥕 당근 채팅 열기</button>
+  </div>
+
+  <!-- 최근 결정 로그 -->
+  <div class="section">
+    <div class="section-title">
+      <span>📋 최근 결정 (봇이 왜 답했/안 했나)</span>
+      <button class="link-btn" id="clearLogBtn">지우기</button>
+    </div>
+    <div id="decisionLog">
+      <div class="empty" style="padding:12px">아직 메시지 처리 기록이 없어요.</div>
+    </div>
+  </div>
+
+  <footer>마지막 새로고침: <span id="updated">-</span></footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
